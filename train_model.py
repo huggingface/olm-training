@@ -5,6 +5,7 @@ import argparse
 parser = argparse.ArgumentParser(description="Launches a model training job with Habana Gaudi on AWS.")
 parser.add_argument("--input_tokenized_dataset_name", required=True)
 parser.add_argument("--input_tokenizer_name", required=True)
+parser.add_argument("--aws_profile_name", required=True)
 parser.add_argument("--gaudi_config_id", required=True)
 parser.add_argument("--output_model_name", required=True)
 args = parser.parse_args()
@@ -17,7 +18,7 @@ hyperparameters = {
     "gaudi_config_id": args.gaudi_config_id,
     "repository_id": args.output_model_name,
     "hf_hub_token": HfFolder.get_token(),  # need to be logged in with `huggingface-cli login`
-    "max_steps": 100_000,
+    "max_steps": 100, # Just for testing purposes
     "per_device_train_batch_size": 32,
     "learning_rate": 5e-5,
 }
@@ -25,7 +26,7 @@ hyperparameters_string = " ".join(f"--{key} {value}" for key, value in hyperpara
 
 runner = EC2RemoteRunner(
   instance_type="dl1.24xlarge",
-  profile="hf-sm",  # adjust to your profile
+  profile=args.aws_profile_name,
   region="us-east-1",
   container="huggingface/optimum-habana:4.21.1-pt1.11.0-synapse1.5.0"
   )
