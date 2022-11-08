@@ -5,7 +5,7 @@ from itertools import chain
 import math
 import argparse
 
-parser = argparse.ArgumentParser(description="Constructs a tokenized dataset from an input tokenizer and a list of input datasets. Also chunks the dataset into examples of tokenizer.max_len tokens. This script guarantees that the fraction of examples which are padded to reach tokenizer.max_len tokens is <= 1/10000. The other examples will be tokenizer.max_len without padding. This amount of padding shouldn't really affect dataset size or training speed.")
+parser = argparse.ArgumentParser(description="Constructs a tokenized dataset from an input tokenizer and a list of input datasets. Also chunks the dataset into examples of tokenizer.max_len tokens. This script guarantees that the fraction of examples which are padded to reach tokenizer.max_len tokens is <= 1/1000. The other examples will be tokenizer.max_len without padding. This amount of padding shouldn't really affect dataset size or training speed.")
 parser.add_argument("--input_dataset_names", nargs='+', required=True)
 parser.add_argument("--input_tokenizer_name", required=True)
 parser.add_argument("--output_dataset_name", required=True)
@@ -45,7 +45,9 @@ def group_texts(examples):
         if remainder > 0:
             concatenated_examples["input_ids"] += [tokenizer.pad_token_id]*(tokenizer.model_max_length - remainder)
             concatenated_examples["special_tokens_mask"] += [1]*(tokenizer.model_max_length - remainder)
-            concatenated_examples["attention_mask"] += [0]*(tokenizer.model_max_length - remainder) 
+            concatenated_examples["attention_mask"] += [0]*(tokenizer.model_max_length - remainder)
+            if "token_type_ids" in concatenated_examples:
+                concatenated_examples["token_type_ids"] += [0]*(tokenizer.model_max_length - remainder)
             total_length = len(concatenated_examples[list(examples.keys())[0]])
     # Split by chunks of max_len.
     result = {
@@ -54,11 +56,9 @@ def group_texts(examples):
     }
     return result
 
-# Note that because the batch size is 10000, the fraction of examples with pad tokens will only be <= 1/10000.
+# Note that because the batch size is 1000, the fraction of examples with pad tokens will only be <= 1/1000.
 # The rest of the examples will have a full max_len tokens without padding.
-tokenized_ds = tokenized_ds.map(group_texts, batched=True, batch_size=10000, num_proc=args.num_proc)
-
-tokenized_ds = tokenized_ds.shuffle(seed=42)
+tokenized_ds = tokenized_ds.map(group_texts, batched=True, batch_size=1000, num_proc=args.num_proc)
 
 print(f"the dataset contains in total {len(tokenized_ds)*tokenizer.model_max_length} tokens")
 

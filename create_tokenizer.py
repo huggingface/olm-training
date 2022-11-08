@@ -7,9 +7,10 @@ import argparse
 
 parser = argparse.ArgumentParser(description="Constructs a Tokenizer from a list of input datasets. It uses all available CPUs by default.")
 parser.add_argument("--input_dataset_names", nargs='+', required=True)
-parser.add_argument("--existing_tokenizer_for_special_tokens", required=True)
+parser.add_argument("--existing_tokenizer_template", required=True)
 parser.add_argument("--output_tokenizer_name", required=True)
 parser.add_argument("--text_column", required=True)
+parser.add_argument("--vocab_size", default=None, type=int)
 parser.add_argument("--push_to_hub", action="store_true")
 args = parser.parse_args()
 
@@ -22,14 +23,14 @@ for dataset_name in args.input_dataset_names:
 raw_ds = concatenate_datasets(ds_list)
 
 # create a python generator to dynamically load the data
-def batch_iterator(batch_size=10000):
+def batch_iterator(batch_size=400000):
     for i in tqdm(range(0, len(raw_ds), batch_size)):
         yield raw_ds[i : i + batch_size][args.text_column]
 
-# create a tokenizer from existing one to re-use special tokens
-tokenizer = AutoTokenizer.from_pretrained(args.existing_tokenizer_for_special_tokens)
+# create a tokenizer from existing one to re-use special tokens and vocab size.
+tokenizer = AutoTokenizer.from_pretrained(args.existing_tokenizer_template)
 
-tokenizer = tokenizer.train_new_from_iterator(text_iterator=batch_iterator(), vocab_size=tokenizer.vocab_size)
+tokenizer = tokenizer.train_new_from_iterator(text_iterator=batch_iterator(), vocab_size=tokenizer.vocab_size if args.vocab_size is None else args.vocab_size)
 
 tokenizer.save_pretrained(args.output_tokenizer_name)
 
