@@ -60,6 +60,7 @@ class ScriptArguments:
     mlm_probability: Optional[float] = field(
         default=0.15, metadata={"help": "Ratio of tokens to mask for masked language modeling loss"}
     )
+    local_rank: Optional[int] = field(default=0, metadata={"help": "Used for multi-gpu"})
 
 
 def run_mlm():
@@ -118,6 +119,7 @@ def run_mlm():
         adam_beta2=0.999,
         adam_epsilon=1e-6,
         weight_decay=0.01,
+        local_rank=script_args.local_rank,
     )
 
     # Initialize our Trainer
