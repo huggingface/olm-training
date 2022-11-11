@@ -6,7 +6,7 @@ import math
 import argparse
 
 parser = argparse.ArgumentParser(description="Constructs a Tokenizer from a list of input datasets. It uses all available CPUs by default.")
-parser.add_argument("--input_dataset_names", nargs='+', required=True)
+parser.add_argument("--input_dataset_names", nargs='+', required=True, help="The datasets to use. They will be concatenated if there is more than one.")
 parser.add_argument("--existing_tokenizer_template", required=True)
 parser.add_argument("--output_tokenizer_name", required=True)
 parser.add_argument("--text_column", required=True)

@@ -47,6 +47,7 @@ def group_texts(examples):
             concatenated_examples["special_tokens_mask"] += [1]*(tokenizer.model_max_length - remainder)
             concatenated_examples["attention_mask"] += [0]*(tokenizer.model_max_length - remainder)
             if "token_type_ids" in concatenated_examples:
+                # token_type_ids is 0 - we don't support next-sentence-prediction.
                 concatenated_examples["token_type_ids"] += [0]*(tokenizer.model_max_length - remainder)
             total_length = len(concatenated_examples[list(examples.keys())[0]])
     # Split by chunks of max_len.
