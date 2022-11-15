@@ -110,9 +110,6 @@ def run_mlm():
         hub_strategy="every_save",
         hub_model_id=script_args.repository_id,
         hub_token=script_args.hf_hub_token,
-        # pretraining
-        #ddp_find_unused_parameters=True,
-        #throughput_warmup_steps=2,
         # gradient_accumulation_steps=31,
         warmup_steps=10000,
         adam_beta1=0.9,
