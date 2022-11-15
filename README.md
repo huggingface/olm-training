@@ -18,6 +18,6 @@ python -m torch.distributed.launch --nproc_per_node=16 train_model.py --lm_type=
 ## Training a BLOOM model from scratch with the CLM pretraining objective
 
 ```
-python -m torch.distributed.launch --nproc_per_node=16 train_model.py --lm_type=clm --dataset_id=Tristan/olm-october-2022-tokenized --repository_id=Tristan/olm-bloom-oct-2022 --tokenizer_id=Tristan/olm-tokenizer --model_config_id=bigscience/bloom-560m --max_steps=90000 --learning_rate=3e-4 --warmup_steps=3000 --adam_beta2=0.95 --weight_decay=0.1 --lr_scheduler_type=cosine
+python -m torch.distributed.launch --nproc_per_node=16 train_model.py --lm_type=clm --dataset_id=Tristan/olm-october-2022-tokenized --repository_id=Tristan/olm-bloom-560m-oct-2022 --tokenizer_id=Tristan/olm-tokenizer --model_config_id=bigscience/bloom-560m --max_steps=90000 --learning_rate=3e-4 --warmup_steps=3000 --adam_beta2=0.95 --weight_decay=0.1 --lr_scheduler_type=cosine
 ```
 

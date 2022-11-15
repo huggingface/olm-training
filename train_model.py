@@ -2,6 +2,7 @@ import logging
 import sys
 from dataclasses import dataclass, field
 from typing import Optional
+import multiprocessing
 
 from transformers import (
     HfArgumentParser,
@@ -11,7 +12,6 @@ from transformers import (
     set_seed,
     AutoConfig,
     DataCollatorForLanguageModeling,
-    default_data_collator,
 )
 
 from transformers import Trainer, TrainingArguments
@@ -49,7 +49,7 @@ class ScriptArguments:
     )
     lm_type: str = field(
         default=None,
-        metadata{"help": "The type of language model to train. Options are mlm or clm."}
+        metadata={"help": "The type of language model to train. Options are mlm or clm."},
     )
     model_config_id: Optional[str] = field(
         default="bert-base-uncased", metadata={"help": "Pretrained config name or path if not the same as model_name"}
@@ -112,9 +112,11 @@ def train_model():
         data_collator = DataCollatorForLanguageModeling(
             tokenizer=tokenizer, mlm_probability=script_args.mlm_probability, pad_to_multiple_of=8
         )
-    else if script_args.lm_type == "clm":
+    elif script_args.lm_type == "clm":
         model = AutoModelForCausalLM.from_config(config)
-        data_collator = default_data_collator
+        data_collator = DataCollatorForLanguageModeling(
+            tokenizer=tokenizer, mlm=False, pad_to_multiple_of=8
+        )
     else:
         raise ValueError("Unrecognized lm_type. Options are mlm or clm.")
 
