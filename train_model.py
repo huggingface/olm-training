@@ -66,6 +66,9 @@ class ScriptArguments:
     mlm_probability: Optional[float] = field(
         default=0.15, metadata={"help": "Ratio of tokens to mask for masked language modeling loss"}
     )
+    gradient_accumulation_steps: Optional[int] = field(
+        default=1, metadata={"help": "Number of gradient accumulation steps to take; artificially increases the batch size"}
+    )
     warmup_steps: Optional[int] = field(
         default=10000, metadata={"help": "Number of learning warmup steps to take"}
     )
@@ -85,6 +88,7 @@ class ScriptArguments:
         default="linear", metadata={"help": "LR scheduler type, such as cosine or linear."}
     )
     local_rank: Optional[int] = field(default=0, metadata={"help": "Used for multi-gpu"})
+    resume_from_checkpoint: Optional[bool] = field(default=False, metadata={"help": "If you want to resume training where it left off."})
 
 
 def train_model():
@@ -134,18 +138,18 @@ def train_model():
         logging_dir=f"{script_args.repository_id}/logs",
         logging_strategy="steps",
         logging_steps=100,
-        save_strategy="steps",
-        save_steps=10000,
+        save_strategy="epoch",
         report_to="tensorboard",
         # push to hub parameters
         push_to_hub=True,
         hub_strategy="every_save",
         hub_model_id=script_args.repository_id,
         hub_token=script_args.hf_hub_token,
-        # gradient_accumulation_steps=31,
+        gradient_accumulation_steps=script_args.gradient_accumulation_steps,
         warmup_steps=script_args.warmup_steps,
         adam_beta1=script_args.adam_beta1,
         adam_beta2=script_args.adam_beta2,
+        bf16 = True,
         adam_epsilon=script_args.adam_epsilon,
         weight_decay=script_args.weight_decay,
         local_rank=script_args.local_rank,
@@ -160,8 +164,9 @@ def train_model():
         tokenizer=tokenizer,
         data_collator=data_collator,
     )
+    
     # train the model
-    trainer.train()
+    trainer.train(script_args.resume_from_checkpoint)
 
 
 if __name__ == "__main__":
