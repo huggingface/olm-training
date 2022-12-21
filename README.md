@@ -1,4 +1,4 @@
-# Online Language Modelling Training Pipeline (WIP)
+# Online Language Modelling Training Pipeline
 
 This repo has the code for training models and tokenizers on the olm data, but it should work with any Hugging Face dataset with text examples.
 
