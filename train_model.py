@@ -3,11 +3,15 @@ import sys
 from dataclasses import dataclass, field
 from typing import Optional
 import multiprocessing
+import torch
+
+from t5_data_collator import DataCollatorForT5MLM, compute_t5_input_and_target_lengths
 
 from transformers import (
     HfArgumentParser,
     AutoModelForMaskedLM,
     AutoModelForCausalLM,
+    T5ForConditionalGeneration,
     AutoTokenizer,
     set_seed,
     AutoConfig,
@@ -49,7 +53,7 @@ class ScriptArguments:
     )
     lm_type: str = field(
         default=None,
-        metadata={"help": "The type of language model to train. Options are mlm or clm."},
+        metadata={"help": "The type of language model to train. Options are mlm, clm, or t5. t5 is a WIP for now and may not work as expected."},
     )
     model_config_id: Optional[str] = field(
         default="bert-base-uncased", metadata={"help": "Pretrained config name or path if not the same as model_name"}
@@ -65,6 +69,9 @@ class ScriptArguments:
     learning_rate: Optional[float] = field(default=1e-4, metadata={"help": "Learning Rate for the training"})
     mlm_probability: Optional[float] = field(
         default=0.15, metadata={"help": "Ratio of tokens to mask for masked language modeling loss"}
+    )
+    mean_noise_span_length: Optional[float] = field(
+        default=3.0, metadata={"help": "Mean span length of masked tokens for T5."}
     )
     gradient_accumulation_steps: Optional[int] = field(
         default=1, metadata={"help": "Number of gradient accumulation steps to take; artificially increases the batch size"}
@@ -89,6 +96,7 @@ class ScriptArguments:
     )
     local_rank: Optional[int] = field(default=0, metadata={"help": "Used for multi-gpu"})
     resume_from_checkpoint: Optional[bool] = field(default=False, metadata={"help": "If you want to resume training where it left off."})
+    deepspeed: Optional[str] = field(default=None, metadata={"help": "Path to deepspeed config if using deepspeed"})
 
 
 def train_model():
@@ -121,8 +129,27 @@ def train_model():
         data_collator = DataCollatorForLanguageModeling(
             tokenizer=tokenizer, mlm=False, pad_to_multiple_of=8
         )
+    elif script_args.lm_type == "t5":
+        # Note that the t5 option runs under some specific settings, but it is a WIP
+        train_dataset = train_dataset.remove_columns(["attention_mask", "special_tokens_mask"])
+        input_length = 462  # len(train_dataset[0]["input_ids"])  # TODO
+        expanded_inputs_length, target_length = compute_t5_input_and_target_lengths(
+            inputs_length=input_length,
+            noise_density=script_args.mlm_probability,
+            mean_noise_span_length=script_args.mean_noise_span_length,
+        )
+        model = T5ForConditionalGeneration._from_config(config)
+        data_collator = DataCollatorForT5MLM(
+            tokenizer=tokenizer,
+            noise_density=script_args.mlm_probability,
+            mean_noise_span_length=script_args.mean_noise_span_length,
+            input_length=input_length,
+            target_length=target_length,
+            pad_token_id=model.config.pad_token_id,
+            decoder_start_token_id=model.config.decoder_start_token_id,
+    )
     else:
-        raise ValueError("Unrecognized lm_type. Options are mlm or clm.")
+        raise ValueError("Unrecognized lm_type. Options are mlm, clm, or t5.")
 
     logger.info(f"Resizing token embedding to {len(tokenizer)}")
     model.resize_token_embeddings(len(tokenizer))
@@ -154,6 +181,7 @@ def train_model():
         weight_decay=script_args.weight_decay,
         local_rank=script_args.local_rank,
         lr_scheduler_type=script_args.lr_scheduler_type,
+        deepspeed=script_args.deepspeed,
     )
 
     # Initialize our Trainer
