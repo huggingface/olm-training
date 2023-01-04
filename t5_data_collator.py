@@ -1,5 +1,6 @@
 '''
-Note that this code mostly comes from https://github.com/huggingface/transformers/blob/main/examples/flax/language-modeling/run_t5_mlm_flax.py with some modifications
+Note that this code mostly comes from https://github.com/huggingface/transformers/blob/main/examples/flax/language-modeling/run_t5_mlm_flax.py with some modifications.
+The code here doesn't rely on flax anymore.
 '''
 
 from typing import Dict, List
@@ -9,9 +10,19 @@ from transformers import (
     PreTrainedTokenizerBase,
 )
 from dataclasses import dataclass
-from transformers.models.t5.modeling_flax_t5 import shift_tokens_right
 import torch
 
+
+def shift_tokens_right(input_ids: np.array, pad_token_id: int, decoder_start_token_id: int) -> np.ndarray:
+    """
+    Shift input ids one token to the right.
+    """
+    shifted_input_ids = np.zeros_like(input_ids)
+    shifted_input_ids[:, 1:] = input_ids[:, :-1]
+    shifted_input_ids[:, 0] = decoder_start_token_id
+
+    shifted_input_ids = np.where(shifted_input_ids == -100, pad_token_id, shifted_input_ids)
+    return shifted_input_ids
 
 def compute_t5_input_and_target_lengths(inputs_length, noise_density, mean_noise_span_length):
     """This function is copy of `random_spans_helper <https://github.com/google-research/text-to-text-transfer-transformer/blob/84f8bcc14b5f2c03de51bd3587609ba8f6bbd1cd/t5/data/preprocessors.py#L2466>`__ .

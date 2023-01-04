@@ -2,8 +2,6 @@ import logging
 import sys
 from dataclasses import dataclass, field
 from typing import Optional
-import multiprocessing
-import torch
 
 from t5_data_collator import DataCollatorForT5MLM, compute_t5_input_and_target_lengths
 
@@ -73,6 +71,9 @@ class ScriptArguments:
     mean_noise_span_length: Optional[float] = field(
         default=3.0, metadata={"help": "Mean span length of masked tokens for T5."}
     )
+    desired_t5_input_length: Optional[int] = field(
+        default=512, metadata={"help": "The desired number of tokens for T5 input. Because T5 masking alters the number of tokens, this value must be specified."}
+    )
     gradient_accumulation_steps: Optional[int] = field(
         default=1, metadata={"help": "Number of gradient accumulation steps to take; artificially increases the batch size"}
     )
@@ -111,14 +112,15 @@ def train_model():
 
     # load processed dataset
     train_dataset = load_dataset(script_args.dataset_id, split="train")
+
     # load trained tokenizer
     tokenizer = AutoTokenizer.from_pretrained(script_args.tokenizer_id, use_auth_token=script_args.hf_hub_token)
 
-    # load model from config (for training from scratch)
+    # load config (for training from scratch, we call .from_config())
     logger.info("Training new model from scratch")
     config = AutoConfig.from_pretrained(script_args.model_config_id)
 
-    # This one will take care of randomly masking the tokens.
+    # Set up the model and data collator.
     if script_args.lm_type == "mlm":
         model = AutoModelForMaskedLM.from_config(config)
         data_collator = DataCollatorForLanguageModeling(
@@ -130,14 +132,19 @@ def train_model():
             tokenizer=tokenizer, mlm=False, pad_to_multiple_of=8
         )
     elif script_args.lm_type == "t5":
-        # Note that the t5 option runs under some specific settings, but it is a WIP
         train_dataset = train_dataset.remove_columns(["attention_mask", "special_tokens_mask"])
-        input_length = 462  # len(train_dataset[0]["input_ids"])  # TODO
+        input_length = script_args.desired_t5_input_length
         expanded_inputs_length, target_length = compute_t5_input_and_target_lengths(
             inputs_length=input_length,
             noise_density=script_args.mlm_probability,
             mean_noise_span_length=script_args.mean_noise_span_length,
         )
+        assert expanded_inputs_length == len(train_dataset[0]["input_ids"]),\
+            f"""
+            You have specified that the T5 input length should be {script_args.desired_t5_input_length}.
+            In order to do this, the examples in the dataset need to be {expanded_inputs_length} before masking.
+            But the examples in the dataset actually appear to be {len(train_dataset[0]['input_ids'])} tokens long.
+            """
         model = T5ForConditionalGeneration._from_config(config)
         data_collator = DataCollatorForT5MLM(
             tokenizer=tokenizer,
@@ -157,10 +164,8 @@ def train_model():
     # define our hyperparameters
     training_args = TrainingArguments(
         output_dir=script_args.repository_id,
-        per_device_train_batch_size=script_args.per_device_train_batch_size,
-        learning_rate=script_args.learning_rate,
-        seed=seed,
-        max_steps=script_args.max_steps,
+        local_rank=script_args.local_rank,
+        deepspeed=script_args.deepspeed,
         # logging & evaluation strategies
         logging_dir=f"{script_args.repository_id}/logs",
         logging_strategy="steps",
@@ -172,6 +177,11 @@ def train_model():
         hub_strategy="every_save",
         hub_model_id=script_args.repository_id,
         hub_token=script_args.hf_hub_token,
+        # optimization parameters
+        per_device_train_batch_size=script_args.per_device_train_batch_size,
+        learning_rate=script_args.learning_rate,
+        seed=seed,
+        max_steps=script_args.max_steps,
         gradient_accumulation_steps=script_args.gradient_accumulation_steps,
         warmup_steps=script_args.warmup_steps,
         adam_beta1=script_args.adam_beta1,
@@ -179,9 +189,7 @@ def train_model():
         bf16 = True,
         adam_epsilon=script_args.adam_epsilon,
         weight_decay=script_args.weight_decay,
-        local_rank=script_args.local_rank,
         lr_scheduler_type=script_args.lr_scheduler_type,
-        deepspeed=script_args.deepspeed,
     )
 
     # Initialize our Trainer
