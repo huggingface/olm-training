@@ -1,6 +1,6 @@
 # Online Language Modelling Training Pipeline
 
-This repo has the code for training models and tokenizers on the olm data, but it should work with any Hugging Face dataset with text examples.
+This repo has the code for training models and tokenizers on the olm data, but it should work with any Hugging Face dataset with text examples. You can see the models for the OLM project here: https://huggingface.co/olm. They actually get better performance than their original static counterparts.
 
 ## Creating a Tokenizer and Tokenizing Datasets
 
