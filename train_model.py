@@ -109,6 +109,37 @@ def train_model():
     # set seed for reproducibility
     seed = 34
     set_seed(seed)
+    
+    # define our hyperparameters
+    training_args = TrainingArguments(
+        output_dir=script_args.repository_id,
+        local_rank=script_args.local_rank,
+        deepspeed=script_args.deepspeed,
+        # logging & evaluation strategies
+        logging_dir=f"{script_args.repository_id}/logs",
+        logging_strategy="steps",
+        logging_steps=100,
+        save_strategy="epoch",
+        report_to="tensorboard",
+        # push to hub parameters
+        push_to_hub=True,
+        hub_strategy="every_save",
+        hub_model_id=script_args.repository_id,
+        hub_token=script_args.hf_hub_token,
+        # optimization parameters
+        per_device_train_batch_size=script_args.per_device_train_batch_size,
+        learning_rate=script_args.learning_rate,
+        seed=seed,
+        max_steps=script_args.max_steps,
+        gradient_accumulation_steps=script_args.gradient_accumulation_steps,
+        warmup_steps=script_args.warmup_steps,
+        adam_beta1=script_args.adam_beta1,
+        adam_beta2=script_args.adam_beta2,
+        bf16 = True,
+        adam_epsilon=script_args.adam_epsilon,
+        weight_decay=script_args.weight_decay,
+        lr_scheduler_type=script_args.lr_scheduler_type,
+    )
 
     # load processed dataset
     train_dataset = load_dataset(script_args.dataset_id, split="train")
@@ -160,37 +191,6 @@ def train_model():
 
     logger.info(f"Resizing token embedding to {len(tokenizer)}")
     model.resize_token_embeddings(len(tokenizer))
-
-    # define our hyperparameters
-    training_args = TrainingArguments(
-        output_dir=script_args.repository_id,
-        local_rank=script_args.local_rank,
-        deepspeed=script_args.deepspeed,
-        # logging & evaluation strategies
-        logging_dir=f"{script_args.repository_id}/logs",
-        logging_strategy="steps",
-        logging_steps=100,
-        save_strategy="epoch",
-        report_to="tensorboard",
-        # push to hub parameters
-        push_to_hub=True,
-        hub_strategy="every_save",
-        hub_model_id=script_args.repository_id,
-        hub_token=script_args.hf_hub_token,
-        # optimization parameters
-        per_device_train_batch_size=script_args.per_device_train_batch_size,
-        learning_rate=script_args.learning_rate,
-        seed=seed,
-        max_steps=script_args.max_steps,
-        gradient_accumulation_steps=script_args.gradient_accumulation_steps,
-        warmup_steps=script_args.warmup_steps,
-        adam_beta1=script_args.adam_beta1,
-        adam_beta2=script_args.adam_beta2,
-        bf16 = True,
-        adam_epsilon=script_args.adam_epsilon,
-        weight_decay=script_args.weight_decay,
-        lr_scheduler_type=script_args.lr_scheduler_type,
-    )
 
     # Initialize our Trainer
     trainer = Trainer(
