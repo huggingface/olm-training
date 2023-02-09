@@ -28,14 +28,16 @@ python -m torch.distributed.launch --nproc_per_node=16 train_model.py --lm_type=
 
 ## Training a T5 model from scratch
 
-Note that it is also possible to train T5, although we haven't tuned the hyperparameters and we aren't trainig the T5 ourselves for the OLM project. If you want to train T5, you would specify arguments like this (but please take the time to find good hyperparameters yourself!). Also note:
-
-1. If you want your T5 to have an input length of 512, you need to pass it a tokenized dataset with examples of length 568. This is because the T5 denoising pretraining objective turns several tokens into one token, so the 568 tokens will be turned into 512 tokens before they are passed into the model.
-2. You should train a separate OLM tokenizer with the `create_tokenizer.py` script above, and it should be based on the T5 tokenizer template to ensure that the tokenizer has the special denoising characters (e.g., just make `--existing_tokenizer_template=t5-small`).
+Note that it is also possible to train T5, although we haven't tuned the hyperparameters and we aren't trainig the T5 ourselves for the OLM project. If you want to train T5, you would specify arguments like this (but please take the time to find good hyperparameters yourself!).
 
 ```bash
 python -m torch.distributed.launch --nproc_per_node=16 train_model.py --lm_type=t5 --dataset_id=Tristan/olm-october-2022-tokenized-568 --repository_id=Tristan/olm-t5-small-oct-2022 --tokenizer_id=Tristan/olm-t5-tokenizer --model_config_id=t5-small --adam_beta2=0.98 --adam_epsilon=1e-6 --adam_beta1=0.9 --warmup_steps=24000 --max_steps=100000 --per_device_train_batch_size=20 --gradient_accumulation_steps=25 --learning_rate=6e-4
 ```
+
+Also note:
+
+1. If you want your T5 to have an input length of 512, you need to pass it a tokenized dataset with examples of length 568. This is because the T5 denoising pretraining objective turns several tokens into one token, so the 568 tokens will be turned into 512 tokens before they are passed into the model.
+2. You should train a separate OLM tokenizer with the `create_tokenizer.py` script above, and it should be based on the T5 tokenizer template to ensure that the tokenizer has the special denoising characters (e.g., just make `--existing_tokenizer_template=t5-small`).
 
 ### Details on compute
 To train both our OLM GPT2 and OLM BERT/RoBERTa, we use a machine with 16 40GB A100's and around 1 TB of disk space. Each model takes about 5-6 days to train with this machine.
