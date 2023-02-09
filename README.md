@@ -43,5 +43,5 @@ Also note:
 1. If you want your T5 to have an input length of 512, you need to pass it a tokenized dataset with examples of length 568. This is because the T5 denoising pretraining objective turns several tokens into one token, so the 568 tokens will be turned into 512 tokens before they are passed into the model.
 2. You should train a separate OLM tokenizer with the `create_tokenizer.py` script above, and it should be based on the T5 tokenizer template to ensure that the tokenizer has the special denoising characters (e.g., just make `--existing_tokenizer_template=t5-small`).
 
-### Details on compute
+## Details on compute
 To train both our OLM GPT2 and OLM BERT/RoBERTa, we use a machine with 16 40GB A100's and around 1 TB of disk space. Each model takes about 5-6 days to train with this machine.
