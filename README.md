@@ -20,11 +20,15 @@ If you just want to train a model on the existing OLM data, you may be able to s
 python -m torch.distributed.launch --nproc_per_node=16 train_model.py --lm_type=mlm --dataset_id=Tristan/olm-october-2022-tokenized-512 --repository_id=Tristan/olm-roberta-base-oct-2022 --tokenizer_id=Tristan/olm-tokenizer --model_config_id=roberta-base --adam_beta2=0.98 --adam_epsilon=1e-6 --adam_beta1=0.9 --warmup_steps=24000 --max_steps=100000 --per_device_train_batch_size=20 --gradient_accumulation_steps=25 --learning_rate=6e-4
 ```
 
+Note that the best hyperparameters are sensitive to both model architecture and scale. We found these hyperparameters to work well for the `roberta-base` model, but they may not work as well for e.g. `roberta-large`, or another architecture entirely.
+
 ## Training a GPT2 model from scratch on 300B tokens (the number of tokens reported in the GTP3 paper)
 
 ```bash
 python -m torch.distributed.launch --nproc_per_node=16 train_model.py --lm_type=clm --dataset_id=Tristan/olm-october-2022-tokenized-1024 --repository_id=Tristan/olm-gpt2-oct-2022 --tokenizer_id=Tristan/olm-tokenizer --model_config_id=gpt2 --max_steps=580000 --learning_rate=1e-3 --warmup_steps=725 --adam_beta1=0.9 --adam_beta2=0.95 --adam_epsilon=1e-7 --weight_decay=0.1 --lr_scheduler_type=cosine --per_device_train_batch_size=8 --gradient_accumulation_steps=4
 ```
+
+Note that the best hyperparameters are sensitive to both model architecture and scale. We found these hyperparameters to work well for the `gpt2` model, but they may not work as well for e.g. `gpt2-large`, or another architecture entirely.
 
 ## Training a T5 model from scratch
 
